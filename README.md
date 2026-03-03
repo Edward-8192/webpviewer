@@ -1,4 +1,4 @@
-# WebP Viewer - 終極功能整合版 🚀 (Use Google Gemini)
+# WebP Viewer - Powered by Google Gemini
 
 一個輕量、流暢且功能強大的網頁版 WebP 圖片檢視器。無需上傳，直接存取本地資料夾，並提供專業級的預覽與投影片功能。
 
@@ -24,7 +24,7 @@
 
 ## 🚀 快速上手
 
-1.  **下載檔案**：下載 `webp_viewer2.html` 到你的電腦。
+1.  **下載檔案**：下載 `webp_viewer.html` 到你的電腦。
 2.  **開啟程式**：使用 Chrome、Edge 或 Brave 瀏覽器直接開啟此 HTML 檔案。
 3.  **選擇資料夾**：點擊左上角的 **📂 選擇**，授權瀏覽器存取包含 WebP 圖片的資料夾。
 4.  **開始瀏覽**：圖片載入後即可進行排序、調整尺寸或進入燈箱。
