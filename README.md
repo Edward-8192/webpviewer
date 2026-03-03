@@ -39,7 +39,7 @@ Enhance your efficiency with these shortcuts while the **Lightbox is open**:
 
 ## 🚀 Quick Start
 
-1.  **Download**: Save `webp_viewer2.html` to your local machine.
+1.  **Download**: Save `webp_viewer.html` to your local machine.
 2.  **Open**: Launch the file using Chrome, Edge, or Brave.
 3.  **Select Folder**: Click **📂 Select** at the top-left and grant permissions to access your image directory.
 
