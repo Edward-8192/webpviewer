@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebP Viewer</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --accent-color: #00bcd4;
+            --text-color: #f0f0f0;
+            --thumb-w: 300px;
+            --thumb-h: 300px;
+        }
+
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: var(--bg-color); color: var(--text-color); 
+            margin: 0; overflow-x: hidden;
+        }
+
+        .sticky-header {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(15px);
+            padding: 10px 20px; border-bottom: 1px solid #333;
+        }
+
+        .controls-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+        .control-group { display: flex; align-items: center; gap: 8px; background: #222; padding: 5px 12px; border-radius: 8px; font-size: 0.8rem; }
+
+        input, select, button {
+            padding: 6px 10px; border-radius: 4px; border: 1px solid #444;
+            background: #333; color: white; cursor: pointer; outline: none;
+        }
+        
+        button.primary { background: var(--accent-color); color: black; font-weight: bold; border: none; }
+        button.quick-load { background: #4caf50; color: white; border: none; display: none; }
+        button:hover { filter: brightness(1.2); }
+        
+        #btnLock { font-size: 1rem; padding: 4px 10px; transition: 0.2s; }
+        #btnLock.locked { background: var(--accent-color); color: black; }
+
+        #btnSortOrder { font-weight: bold; min-width: 35px; }
+
+        .switch {
+            position: relative; display: inline-block; width: 34px; height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #444; transition: .4s; border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(14px); }
+
+        .gallery {
+            display: grid; padding: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(var(--thumb-w), 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            transition: 0.2s; cursor: pointer; border: 2px solid transparent;
+        }
+        .card:hover { border-color: var(--accent-color); transform: translateY(-3px); }
+        .card img { width: 100%; height: var(--thumb-h); object-fit: cover; display: block; background: #000; }
+        .filename { padding: 5px; font-size: 0.7rem; text-align: center; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        #lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.98); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .img-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: grab; position: relative; }
+        #lightboxImg { transition: transform 0.1s ease-out; transform-origin: center; position: absolute; }
+        .lb-ui { position: absolute; color: white; z-index: 1001; user-select: none; }
+        .close-btn { top: 20px; right: 20px; font-size: 24px; cursor: pointer; width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center;}
+        
+        .nav-btn { top: 50%; transform: translateY(-50%); font-size: 40px; cursor: pointer; padding: 20px; background: rgba(0,0,0,0); opacity: 0;}
+        .img-container:hover ~ .nav-btn, .nav-btn:hover { opacity: 0.3; }
+        .nav-btn:hover { background: rgba(255,255,255,0.05); opacity: 1 !important; }
+        .prev-btn { left: 10px; }
+        .next-btn { right: 10px; }
+
+        #slideshowBar { bottom: 30px; display: flex; justify-content: center; background: rgba(20,20,20,0.8); padding: 8px 20px; border-radius: 30px; border: 1px solid #444; transition: opacity 0.3s; }
+        #slideshowBar.playing { opacity: 0; pointer-events: none; }
+        #slideshowBar:hover { opacity: 1 !important; pointer-events: auto; }
+
+        .zoom-info { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; font-family: monospace; font-size: 0.75rem; color: #00bcd4;}
+    </style>
+</head>
+<body>
+
+<div class="sticky-header">
+    <div class="controls-row">
+        <button id="btnPicker" class="primary">📂 選擇</button>
+        <button id="btnQuickLoad" class="quick-load">⚡ 載入</button>
+        
+        <div class="control-group">
+            🔍 <input type="text" id="search" placeholder="搜尋..." style="width: 60px;">
+        </div>
+
+        <div class="control-group">
+            寬 <input type="range" id="wRange" min="100" max="800" value="300" style="width: 60px;">
+            <button id="btnLock" title="鎖定比例" class="locked">🔒</button>
+            高 <input type="range" id="hRange" min="100" max="800" value="300" style="width: 60px;">
+        </div>
+
+        <div class="control-group">
+            <select id="sortType">
+                <option value="default">預設</option>
+                <option value="random">隨機</option>
+                <option value="name">檔名</option>
+                <option value="folder">資料夾</option>
+                <option value="date">日期</option>
+                <option value="size">大小</option>
+            </select>
+            <button id="btnSortOrder" title="切換遞增/遞減">↑</button>
+            <button id="btnShuffle" title="隨機打亂">🔀</button>
+        </div>
+
+        <div class="control-group">
+            ⏱️ <input type="range" id="speedRange" min="0.5" max="15" step="0.5" value="3" style="width: 50px;">
+            <span id="speedDisplay" style="min-width:30px; color:var(--accent-color);">3s</span>
+            <label class="switch" title="顯示播放鈕">
+                <input type="checkbox" id="showSlideTools">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <button id="btnFullscreen">🔲</button>
+        <span id="status" style="font-weight: bold; font-size: 0.75rem;"></span>
+    </div>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<div id="lightbox">
+    <div class="zoom-info" id="zoomInfo">Zoom: Fit</div>
+    <div class="lb-ui close-btn" onclick="closeLightbox()">✕</div>
+    <div class="lb-ui nav-btn prev-btn" onclick="changeImg(-1)">❮</div>
+    <div class="lb-ui nav-btn next-btn" onclick="changeImg(1)">❯</div>
+    <div class="img-container" id="imgContainer">
+        <img id="lightboxImg" src="">
+    </div>
+    <div id="slideshowBar" class="lb-ui">
+        <button id="btnSlideshow" style="border-radius: 20px; padding: 5px 25px; background: var(--accent-color); color: black; border:none; font-weight:bold;">▶ 開始播放</button>
+    </div>
+</div>
+
+<script>
+    let files = []; 
+    let currentIndex = 0;
+    let isSlideshow = false;
+    let slideTimer = null;
+    let zoomLevel = 1;
+    let isDragging = false, startX, startY, moveX = 0, moveY = 0;
+    let currentViewList = [];
+    
+    let isLocked = true, currentRatio = 1;
+    let sortOrder = 'asc';
+
+    const gallery = document.getElementById('gallery');
+    const lbImg = document.getElementById('lightboxImg');
+    const lb = document.getElementById('lightbox');
+    const container = document.getElementById('imgContainer');
+    const zoomInfo = document.getElementById('zoomInfo');
+    const slideBar = document.getElementById('slideshowBar');
+    const btnSlideshow = document.getElementById('btnSlideshow');
+    const speedRange = document.getElementById('speedRange');
+    const speedDisplay = document.getElementById('speedDisplay');
+    const showToolsCheckbox = document.getElementById('showSlideTools');
+
+    const wRange = document.getElementById('wRange');
+    const hRange = document.getElementById('hRange');
+    const btnLock = document.getElementById('btnLock');
+
+    btnLock.onclick = () => {
+        isLocked = !isLocked;
+        btnLock.innerText = isLocked ? '🔒' : '🔓';
+        btnLock.classList.toggle('locked', isLocked);
+        if (isLocked) currentRatio = parseInt(wRange.value) / parseInt(hRange.value);
+    };
+
+    wRange.oninput = (e) => {
+        const val = parseInt(e.target.value);
+        document.documentElement.style.setProperty('--thumb-w', val + 'px');
+        if (isLocked) {
+            const h = Math.round(val / currentRatio);
+            hRange.value = h;
+            document.documentElement.style.setProperty('--thumb-h', h + 'px');
+        }
+    };
+
+    hRange.oninput = (e) => {
+        const val = parseInt(e.target.value);
+        document.documentElement.style.setProperty('--thumb-h', val + 'px');
+        if (isLocked) {
+            const w = Math.round(val * currentRatio);
+            wRange.value = w;
+            document.documentElement.style.setProperty('--thumb-w', w + 'px');
+        }
+    };
+
+    const btnSortOrder = document.getElementById('btnSortOrder');
+    btnSortOrder.onclick = () => {
+        sortOrder = (sortOrder === 'asc') ? 'desc' : 'asc';
+        btnSortOrder.innerText = (sortOrder === 'asc') ? '↑' : '↓';
+        render();
+    };
+
+    // --- IndexedDB & 載入邏輯保持不變 ---
+    const DB_NAME = "WebPFolderDB_vFinal_v2";
+    const STORE_NAME = "handles";
+    async function getDB() {
+        return new Promise(res => {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+            req.onsuccess = () => res(req.result);
+        });
+    }
+    async function saveHandle(h) {
+        const db = await getDB();
+        db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(h, "lastFolder");
+    }
+    async function getLastHandle() {
+        const db = await getDB();
+        return new Promise(res => {
+            const req = db.transaction(STORE_NAME).objectStore(STORE_NAME).get("lastFolder");
+            req.onsuccess = () => res(req.result);
+        });
+    }
+    async function checkLastFolder() {
+        const h = await getLastHandle();
+        if (h) {
+            const btn = document.getElementById('btnQuickLoad');
+            btn.style.display = "inline-block";
+            btn.innerText = `⚡ ${h.name}`;
+        }
+    }
+    checkLastFolder();
+
+    async function handlePicker(isQuick = false) {
+        if (!window.showDirectoryPicker) {
+            alert("您的瀏覽器不支援本地資料夾存取。");
+            return;
+        }
+        try {
+            let dir;
+            if (isQuick) {
+                dir = await getLastHandle();
+                if (await dir.requestPermission({ mode: 'read' }) !== 'granted') return;
+            } else {
+                dir = await window.showDirectoryPicker();
+                await saveHandle(dir);
+                checkLastFolder();
+            }
+            files = [];
+            document.getElementById('status').innerText = "讀取中...";
+            await scan(dir);
+            render();
+        } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+    }
+
+    document.getElementById('btnPicker').onclick = () => handlePicker(false);
+    document.getElementById('btnQuickLoad').onclick = () => handlePicker(true);
+
+    async function scan(handle, path = "") {
+        for await (const e of handle.values()) {
+            if (e.kind === 'directory') await scan(e, path + e.name + "/");
+            else if (e.name.toLowerCase().endsWith('.webp')) {
+                const file = await e.getFile();
+                files.push({ 
+                    name: e.name, 
+                    url: URL.createObjectURL(file),
+                    size: file.size,
+                    date: file.lastModified,
+                    path: path,
+                    originalIndex: files.length
+                });
+            }
+        }
+    }
+
+    function render() {
+        const search = document.getElementById('search').value.toLowerCase();
+        const sortType = document.getElementById('sortType').value;
+
+        let list = files.filter(f => f.name.toLowerCase().includes(search));
+
+        // 核心修正：隨機模式下不進行排序比對
+        if (sortType !== 'random') {
+            list.sort((a, b) => {
+                let res = 0;
+                if (sortType === 'default') {
+                    res = a.originalIndex - b.originalIndex;
+                } else if (sortType === 'name') {
+                    res = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+                } else if (sortType === 'folder') {
+                    res = a.path.localeCompare(b.path, undefined, { numeric: true });
+                    if (res === 0) res = a.name.localeCompare(b.name, undefined, { numeric: true });
+                } else if (sortType === 'date') {
+                    res = a.date - b.date;
+                } else if (sortType === 'size') {
+                    res = a.size - b.size;
+                }
+                return sortOrder === 'asc' ? res : -res;
+            });
+        }
+
+        gallery.innerHTML = '';
+        list.forEach((f, idx) => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<img src="${f.url}" loading="lazy"><div class="filename" title="${f.path}${f.name}">${f.name}</div>`;
+            div.onclick = () => openLightbox(list, idx);
+            gallery.appendChild(div);
+        });
+        document.getElementById('status').innerText = `${list.length} P`;
+    }
+
+    // --- 修改後的隨機打亂按鈕 ---
+    document.getElementById('btnShuffle').onclick = () => {
+        for (let i = files.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [files[i], files[j]] = [files[j], files[i]];
+        }
+        // 點擊打亂後，自動切換到「隨機」排序模式
+        document.getElementById('sortType').value = 'random';
+        render();
+    };
+
+    // --- 燈箱與互動邏輯保持不變 ---
+    function openLightbox(list, index) {
+        currentViewList = list;
+        currentIndex = index;
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        slideBar.style.display = showToolsCheckbox.checked ? 'flex' : 'none';
+        updateImg(true);
+    }
+
+    function updateImg(isInitial = false) {
+        lbImg.src = currentViewList[currentIndex].url;
+        lbImg.onload = () => fitImageToScreen();
+    }
+
+    function fitImageToScreen() {
+        const cw = container.clientWidth, ch = container.clientHeight;
+        const ir = lbImg.naturalWidth / lbImg.naturalHeight, cr = cw / ch;
+        if (ir > cr) { lbImg.style.width = '100%'; lbImg.style.height = 'auto'; }
+        else { lbImg.style.width = 'auto'; lbImg.style.height = '100%'; }
+        zoomLevel = 1; moveX = 0; moveY = 0;
+        zoomInfo.innerText = "Zoom: Fit";
+        applyTransform(false);
+    }
+
+    function changeImg(step) {
+        if (!currentViewList.length) return;
+        currentIndex = (currentIndex + step + currentViewList.length) % currentViewList.length;
+        updateImg();
+    }
+
+    function closeLightbox() {
+        lb.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        stopSlideshow();
+    }
+
+    btnSlideshow.onclick = (e) => {
+        e.stopPropagation();
+        isSlideshow ? stopSlideshow() : startSlideshow();
+    };
+
+    function startSlideshow() {
+        isSlideshow = true;
+        btnSlideshow.innerText = "⏸ 停止播放";
+        slideBar.classList.add('playing');
+        const interval = parseFloat(speedRange.value) * 1000;
+        slideTimer = setInterval(() => changeImg(1), interval);
+    }
+
+    function stopSlideshow() {
+        isSlideshow = false;
+        btnSlideshow.innerText = "▶ 開始播放";
+        slideBar.classList.remove('playing');
+        clearInterval(slideTimer);
+    }
+
+    speedRange.oninput = (e) => {
+        speedDisplay.innerText = parseFloat(e.target.value).toFixed(0) + "s";
+        if (isSlideshow) { stopSlideshow(); startSlideshow(); }
+    };
+
+    showToolsCheckbox.onchange = (e) => {
+        if (lb.style.display === 'flex') {
+            slideBar.style.display = e.target.checked ? 'flex' : 'none';
+        }
+    };
+
+    window.addEventListener('keydown', (e) => {
+        if (lb.style.display !== 'flex') return;
+        if (e.key === 'ArrowRight') { stopSlideshow(); changeImg(1); }
+        else if (e.key === 'ArrowLeft') { stopSlideshow(); changeImg(-1); }
+        else if (e.key === 'Escape') closeLightbox();
+        else if (e.key === ' ') { e.preventDefault(); isSlideshow ? stopSlideshow() : startSlideshow(); }
+    });
+
+    container.onwheel = (e) => {
+        e.preventDefault();
+        stopSlideshow();
+        zoomLevel = Math.max(0.1, Math.min(10, zoomLevel + (e.deltaY > 0 ? -0.1 : 0.1)));
+        zoomInfo.innerText = `Zoom: ${Math.round(zoomLevel * 100)}%`;
+        applyTransform(true);
+    };
+
+    function applyTransform(useT) {
+        lbImg.style.transition = useT ? 'transform 0.1s ease-out' : 'none';
+        lbImg.style.transform = `translate(${moveX}px, ${moveY}px) scale(${zoomLevel})`;
+    }
+
+    container.onmousedown = (e) => {
+        if (isSlideshow) stopSlideshow();
+        isDragging = true;
+        startX = e.clientX - moveX;
+        startY = e.clientY - moveY;
+    };
+    window.onmousemove = (e) => {
+        if (!isDragging) return;
+        moveX = e.clientX - startX;
+        moveY = e.clientY - startY;
+        applyTransform(false);
+    };
+    window.onmouseup = () => isDragging = false;
+
+    document.getElementById('search').oninput = render;
+    document.getElementById('sortType').onchange = render;
+    document.getElementById('btnFullscreen').onclick = () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    };
+</script>
+</body>
+</html>
