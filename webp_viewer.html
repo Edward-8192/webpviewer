@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebP Viewer</title>
+    <title>WebP Pro - 智慧目錄過濾版</title>
     <style>
         :root {
             --bg-color: #0a0a0a;
@@ -20,12 +20,12 @@
             margin: 0; overflow-x: hidden;
         }
 
+        /* 頂部控制欄 */
         .sticky-header {
             position: sticky; top: 0; z-index: 100;
             background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(15px);
             padding: 10px 20px; border-bottom: 1px solid #333;
         }
-
         .controls-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
         .control-group { display: flex; align-items: center; gap: 8px; background: #222; padding: 5px 12px; border-radius: 8px; font-size: 0.8rem; }
 
@@ -33,73 +33,66 @@
             padding: 6px 10px; border-radius: 4px; border: 1px solid #444;
             background: #333; color: white; cursor: pointer; outline: none;
         }
-        
         button.primary { background: var(--accent-color); color: black; font-weight: bold; border: none; }
-        button.quick-load { background: #4caf50; color: white; border: none; display: none; }
         button:hover { filter: brightness(1.2); }
-        
-        #btnLock { font-size: 1rem; padding: 4px 10px; transition: 0.2s; }
         #btnLock.locked { background: var(--accent-color); color: black; }
 
-        #btnSortOrder { font-weight: bold; min-width: 35px; }
-
-        .switch {
-            position: relative; display: inline-block; width: 34px; height: 20px;
-        }
+        /* Switch 樣式 */
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #444; transition: .4s; border-radius: 20px;
-        }
-        .slider:before {
-            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
-            background-color: white; transition: .4s; border-radius: 50%;
-        }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent-color); }
         input:checked + .slider:before { transform: translateX(14px); }
 
+        /* 目錄樹 Modal */
+        #treeModal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000;
+            display: none; justify-content: center; align-items: center;
+        }
+        .tree-content {
+            background: #1e1e1e; width: 80%; max-width: 500px; max-height: 80vh;
+            border-radius: 12px; padding: 20px; display: flex; flex-direction: column;
+            border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .tree-body { overflow-y: auto; flex-grow: 1; margin: 15px 0; padding-right: 10px; }
+        .tree-item { margin: 5px 0; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .tree-item label { cursor: pointer; }
+
+        /* 藝廊佈局 */
         .gallery {
             display: grid; padding: 20px;
             grid-template-columns: repeat(auto-fill, minmax(var(--thumb-w), 1fr));
             gap: 15px;
         }
-
-        .card {
-            background: var(--card-bg); border-radius: 8px; overflow: hidden;
-            transition: 0.2s; cursor: pointer; border: 2px solid transparent;
-        }
+        .card { background: var(--card-bg); border-radius: 8px; overflow: hidden; transition: 0.2s; cursor: pointer; border: 2px solid transparent; }
         .card:hover { border-color: var(--accent-color); transform: translateY(-3px); }
         .card img { width: 100%; height: var(--thumb-h); object-fit: cover; display: block; background: #000; }
         .filename { padding: 5px; font-size: 0.7rem; text-align: center; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+        /* 燈箱 */
         #lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.98); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
         .img-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: grab; position: relative; }
         #lightboxImg { transition: transform 0.1s ease-out; transform-origin: center; position: absolute; }
-        .lb-ui { position: absolute; color: white; z-index: 1001; user-select: none; }
+        .lb-ui { position: absolute; color: white; z-index: 1010; user-select: none; }
         .close-btn { top: 20px; right: 20px; font-size: 24px; cursor: pointer; width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center;}
-        
-        .nav-btn { top: 50%; transform: translateY(-50%); font-size: 40px; cursor: pointer; padding: 20px; background: rgba(0,0,0,0); opacity: 0;}
-        .img-container:hover ~ .nav-btn, .nav-btn:hover { opacity: 0.3; }
-        .nav-btn:hover { background: rgba(255,255,255,0.05); opacity: 1 !important; }
-        .prev-btn { left: 10px; }
-        .next-btn { right: 10px; }
-
-        #slideshowBar { bottom: 30px; display: flex; justify-content: center; background: rgba(20,20,20,0.8); padding: 8px 20px; border-radius: 30px; border: 1px solid #444; transition: opacity 0.3s; }
-        #slideshowBar.playing { opacity: 0; pointer-events: none; }
-        #slideshowBar:hover { opacity: 1 !important; pointer-events: auto; }
-
-        .zoom-info { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; font-family: monospace; font-size: 0.75rem; color: #00bcd4;}
+        .nav-btn { top: 50%; transform: translateY(-50%); font-size: 40px; cursor: pointer; padding: 20px; opacity: 0; transition: 0.2s;}
+        .img-container:hover ~ .nav-btn, .nav-btn:hover { opacity: 0.5; }
+        .prev-btn { left: 10px; } .next-btn { right: 10px; }
+        #slideshowBar { bottom: 30px; display: flex; justify-content: center; background: rgba(20,20,20,0.8); padding: 8px 20px; border-radius: 30px; border: 1px solid #444; }
+        .zoom-info { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; font-family: monospace; font-size: 0.75rem; color: var(--accent-color);}
     </style>
 </head>
 <body>
 
 <div class="sticky-header">
     <div class="controls-row">
-        <button id="btnPicker" class="primary">📂 選擇</button>
-        <button id="btnQuickLoad" class="quick-load">⚡ 載入</button>
+        <button id="btnPicker" class="primary">📂 選擇資料夾</button>
+        <button id="btnQuickLoad" style="display:none; background:#4caf50;">⚡ 快速載入</button>
         
         <div class="control-group">
-            🔍 <input type="text" id="search" placeholder="搜尋..." style="width: 60px;">
+            🔍 <input type="text" id="search" placeholder="搜尋..." style="width: 80px;">
         </div>
 
         <div class="control-group">
@@ -110,21 +103,21 @@
 
         <div class="control-group">
             <select id="sortType">
-                <option value="default">預設</option>
-                <option value="random">隨機</option>
+                <option value="default">預設順序</option>
+                <option value="random">隨機排序</option>
                 <option value="name">檔名</option>
                 <option value="folder">資料夾</option>
                 <option value="date">日期</option>
                 <option value="size">大小</option>
             </select>
-            <button id="btnSortOrder" title="切換遞增/遞減">↑</button>
-            <button id="btnShuffle" title="隨機打亂">🔀</button>
+            <button id="btnSortOrder" title="遞增/遞減">↑</button>
+            <button id="btnShuffle" title="打亂圖片">🔀</button>
         </div>
 
         <div class="control-group">
             ⏱️ <input type="range" id="speedRange" min="0.5" max="15" step="0.5" value="3" style="width: 50px;">
-            <span id="speedDisplay" style="min-width:30px; color:var(--accent-color);">3s</span>
-            <label class="switch" title="顯示播放鈕">
+            <span id="speedDisplay" style="color:var(--accent-color);">3s</span>
+            <label class="switch" title="燈箱播放鈕">
                 <input type="checkbox" id="showSlideTools">
                 <span class="slider"></span>
             </label>
@@ -132,6 +125,17 @@
 
         <button id="btnFullscreen">🔲</button>
         <span id="status" style="font-weight: bold; font-size: 0.75rem;"></span>
+    </div>
+</div>
+
+<div id="treeModal">
+    <div class="tree-content">
+        <h3 style="margin-top:0;">📁 選擇要掃描的子資料夾</h3>
+        <div class="tree-body" id="treeBody"></div>
+        <div style="display:flex; gap:10px; justify-content: flex-end;">
+            <button onclick="document.getElementById('treeModal').style.display='none'">取消</button>
+            <button class="primary" id="btnStartScan">開始掃描</button>
+        </div>
     </div>
 </div>
 
@@ -145,167 +149,157 @@
     <div class="img-container" id="imgContainer">
         <img id="lightboxImg" src="">
     </div>
-    <div id="slideshowBar" class="lb-ui">
+    <div id="slideshowBar" class="lb-ui" style="display:none;">
         <button id="btnSlideshow" style="border-radius: 20px; padding: 5px 25px; background: var(--accent-color); color: black; border:none; font-weight:bold;">▶ 開始播放</button>
     </div>
 </div>
 
 <script>
-    let files = []; 
+    let allFiles = []; 
     let currentIndex = 0;
-    let isSlideshow = false;
-    let slideTimer = null;
-    let zoomLevel = 1;
-    let isDragging = false, startX, startY, moveX = 0, moveY = 0;
+    let isSlideshow = false, slideTimer = null;
+    let zoomLevel = 1, moveX = 0, moveY = 0, isDragging = false, startX, startY;
     let currentViewList = [];
-    
     let isLocked = true, currentRatio = 1;
     let sortOrder = 'asc';
+    let folderMap = new Map(); // 儲存目錄結構
 
     const gallery = document.getElementById('gallery');
     const lbImg = document.getElementById('lightboxImg');
     const lb = document.getElementById('lightbox');
-    const container = document.getElementById('imgContainer');
-    const zoomInfo = document.getElementById('zoomInfo');
     const slideBar = document.getElementById('slideshowBar');
-    const btnSlideshow = document.getElementById('btnSlideshow');
+    const showToolsCheckbox = document.getElementById('showSlideTools');
     const speedRange = document.getElementById('speedRange');
     const speedDisplay = document.getElementById('speedDisplay');
-    const showToolsCheckbox = document.getElementById('showSlideTools');
+    const treeModal = document.getElementById('treeModal');
+    const treeBody = document.getElementById('treeBody');
 
-    const wRange = document.getElementById('wRange');
-    const hRange = document.getElementById('hRange');
-    const btnLock = document.getElementById('btnLock');
-
-    btnLock.onclick = () => {
+    // --- UI 控制 ---
+    document.getElementById('btnLock').onclick = function() {
         isLocked = !isLocked;
-        btnLock.innerText = isLocked ? '🔒' : '🔓';
-        btnLock.classList.toggle('locked', isLocked);
+        this.innerText = isLocked ? '🔒' : '🔓';
+        this.classList.toggle('locked', isLocked);
         if (isLocked) currentRatio = parseInt(wRange.value) / parseInt(hRange.value);
     };
 
+    const wRange = document.getElementById('wRange'), hRange = document.getElementById('hRange');
     wRange.oninput = (e) => {
-        const val = parseInt(e.target.value);
-        document.documentElement.style.setProperty('--thumb-w', val + 'px');
+        document.documentElement.style.setProperty('--thumb-w', e.target.value + 'px');
         if (isLocked) {
-            const h = Math.round(val / currentRatio);
+            const h = Math.round(e.target.value / currentRatio);
             hRange.value = h;
             document.documentElement.style.setProperty('--thumb-h', h + 'px');
         }
     };
-
     hRange.oninput = (e) => {
-        const val = parseInt(e.target.value);
-        document.documentElement.style.setProperty('--thumb-h', val + 'px');
+        document.documentElement.style.setProperty('--thumb-h', e.target.value + 'px');
         if (isLocked) {
-            const w = Math.round(val * currentRatio);
+            const w = Math.round(e.target.value * currentRatio);
             wRange.value = w;
             document.documentElement.style.setProperty('--thumb-w', w + 'px');
         }
     };
 
-    const btnSortOrder = document.getElementById('btnSortOrder');
-    btnSortOrder.onclick = () => {
+    document.getElementById('btnSortOrder').onclick = function() {
         sortOrder = (sortOrder === 'asc') ? 'desc' : 'asc';
-        btnSortOrder.innerText = (sortOrder === 'asc') ? '↑' : '↓';
+        this.innerText = (sortOrder === 'asc') ? '↑' : '↓';
         render();
     };
 
-    // --- IndexedDB & 載入邏輯保持不變 ---
-    const DB_NAME = "WebPFolderDB_vFinal_v2";
-    const STORE_NAME = "handles";
-    async function getDB() {
-        return new Promise(res => {
-            const req = indexedDB.open(DB_NAME, 1);
-            req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
-            req.onsuccess = () => res(req.result);
-        });
-    }
-    async function saveHandle(h) {
-        const db = await getDB();
-        db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(h, "lastFolder");
-    }
-    async function getLastHandle() {
-        const db = await getDB();
-        return new Promise(res => {
-            const req = db.transaction(STORE_NAME).objectStore(STORE_NAME).get("lastFolder");
-            req.onsuccess = () => res(req.result);
-        });
-    }
-    async function checkLastFolder() {
-        const h = await getLastHandle();
-        if (h) {
-            const btn = document.getElementById('btnQuickLoad');
-            btn.style.display = "inline-block";
-            btn.innerText = `⚡ ${h.name}`;
-        }
-    }
-    checkLastFolder();
-
+    // --- 目錄掃描邏輯 ---
     async function handlePicker(isQuick = false) {
-        if (!window.showDirectoryPicker) {
-            alert("您的瀏覽器不支援本地資料夾存取。");
-            return;
-        }
+        if (!window.showDirectoryPicker) return alert("瀏覽器不支援此功能");
         try {
-            let dir;
-            if (isQuick) {
-                dir = await getLastHandle();
-                if (await dir.requestPermission({ mode: 'read' }) !== 'granted') return;
-            } else {
-                dir = await window.showDirectoryPicker();
-                await saveHandle(dir);
-                checkLastFolder();
-            }
-            files = [];
-            document.getElementById('status').innerText = "讀取中...";
-            await scan(dir);
-            render();
+            let rootHandle = isQuick ? await getLastHandle() : await window.showDirectoryPicker();
+            if (isQuick && await rootHandle.requestPermission({ mode: 'read' }) !== 'granted') return;
+            if (!isQuick) await saveHandle(rootHandle);
+
+            folderMap.clear();
+            treeBody.innerHTML = "解析目錄結構中...";
+            treeModal.style.display = 'flex';
+            
+            await buildTree(rootHandle, "");
+            renderTree();
         } catch (e) { if (e.name !== 'AbortError') console.error(e); }
     }
 
-    document.getElementById('btnPicker').onclick = () => handlePicker(false);
-    document.getElementById('btnQuickLoad').onclick = () => handlePicker(true);
+    async function buildTree(handle, path) {
+        let subFolders = [];
+        for await (const entry of handle.values()) {
+            // 過濾掉隱藏資料夾與 ._ 資料夾
+            if (entry.kind === 'directory' && !entry.name.startsWith('.') && !entry.name.startsWith('._')) {
+                const subPath = path + entry.name + "/";
+                subFolders.push({ name: entry.name, path: subPath, handle: entry });
+                await buildTree(entry, subPath);
+            }
+        }
+        folderMap.set(path || "/", { handle, subFolders });
+    }
 
-    async function scan(handle, path = "") {
-        for await (const e of handle.values()) {
-            if (e.kind === 'directory') await scan(e, path + e.name + "/");
-            else if (e.name.toLowerCase().endsWith('.webp')) {
-                const file = await e.getFile();
-                files.push({ 
-                    name: e.name, 
-                    url: URL.createObjectURL(file),
-                    size: file.size,
-                    date: file.lastModified,
-                    path: path,
-                    originalIndex: files.length
-                });
+    function renderTree() {
+        treeBody.innerHTML = "";
+        // 先加入根目錄
+        folderMap.forEach((val, path) => {
+            const div = document.createElement('div');
+            div.className = "tree-item";
+            const depth = (path.match(/\//g) || []).length;
+            div.style.paddingLeft = (depth * 20) + "px";
+            div.innerHTML = `
+                <input type="checkbox" id="chk-${path}" value="${path}" checked>
+                <label for="chk-${path}">${path === "/" ? "📁 根目錄" : "📂 " + path.split('/').filter(Boolean).pop()}</label>
+            `;
+            treeBody.appendChild(div);
+        });
+    }
+
+    document.getElementById('btnStartScan').onclick = async () => {
+        const selectedPaths = Array.from(treeBody.querySelectorAll('input:checked')).map(i => i.value);
+        treeModal.style.display = 'none';
+        allFiles = [];
+        document.getElementById('status').innerText = "掃描中...";
+        
+        for (const path of selectedPaths) {
+            const folder = folderMap.get(path);
+            await scanFiles(folder.handle, path === "/" ? "" : path);
+        }
+        render();
+    };
+
+    async function scanFiles(handle, path) {
+        for await (const entry of handle.values()) {
+            if (entry.kind === 'file') {
+                const name = entry.name.toLowerCase();
+                // 智慧過濾：排除隱藏檔、._ 開頭檔案、以及非 WebP 檔案
+                if (name.endsWith('.webp') && !name.startsWith('.') && !name.startsWith('._')) {
+                    const file = await entry.getFile();
+                    allFiles.push({
+                        name: entry.name,
+                        url: URL.createObjectURL(file),
+                        size: file.size,
+                        date: file.lastModified,
+                        path: path,
+                        originalIndex: allFiles.length
+                    });
+                }
             }
         }
     }
 
+    // --- 藝廊渲染 ---
     function render() {
         const search = document.getElementById('search').value.toLowerCase();
         const sortType = document.getElementById('sortType').value;
 
-        let list = files.filter(f => f.name.toLowerCase().includes(search));
+        let list = allFiles.filter(f => f.name.toLowerCase().includes(search));
 
-        // 核心修正：隨機模式下不進行排序比對
         if (sortType !== 'random') {
             list.sort((a, b) => {
                 let res = 0;
-                if (sortType === 'default') {
-                    res = a.originalIndex - b.originalIndex;
-                } else if (sortType === 'name') {
-                    res = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-                } else if (sortType === 'folder') {
-                    res = a.path.localeCompare(b.path, undefined, { numeric: true });
-                    if (res === 0) res = a.name.localeCompare(b.name, undefined, { numeric: true });
-                } else if (sortType === 'date') {
-                    res = a.date - b.date;
-                } else if (sortType === 'size') {
-                    res = a.size - b.size;
-                }
+                if (sortType === 'default') res = a.originalIndex - b.originalIndex;
+                else if (sortType === 'name') res = a.name.localeCompare(b.name, undefined, { numeric: true });
+                else if (sortType === 'folder') res = a.path.localeCompare(b.path);
+                else if (sortType === 'date') res = a.date - b.date;
+                else if (sortType === 'size') res = a.size - b.size;
                 return sortOrder === 'asc' ? res : -res;
             });
         }
@@ -318,47 +312,43 @@
             div.onclick = () => openLightbox(list, idx);
             gallery.appendChild(div);
         });
-        document.getElementById('status').innerText = `${list.length} P`;
+        document.getElementById('status').innerText = `${list.length} 張圖片`;
     }
 
-    // --- 修改後的隨機打亂按鈕 ---
     document.getElementById('btnShuffle').onclick = () => {
-        for (let i = files.length - 1; i > 0; i--) {
+        for (let i = allFiles.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [files[i], files[j]] = [files[j], files[i]];
+            [allFiles[i], allFiles[j]] = [allFiles[j], allFiles[i]];
         }
-        // 點擊打亂後，自動切換到「隨機」排序模式
         document.getElementById('sortType').value = 'random';
         render();
     };
 
-    // --- 燈箱與互動邏輯保持不變 ---
+    // --- 燈箱邏輯 ---
     function openLightbox(list, index) {
-        currentViewList = list;
-        currentIndex = index;
+        currentViewList = list; currentIndex = index;
         lb.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         slideBar.style.display = showToolsCheckbox.checked ? 'flex' : 'none';
-        updateImg(true);
+        updateImg();
     }
 
-    function updateImg(isInitial = false) {
+    function updateImg() {
         lbImg.src = currentViewList[currentIndex].url;
-        lbImg.onload = () => fitImageToScreen();
+        lbImg.onload = fitImage;
     }
 
-    function fitImageToScreen() {
+    function fitImage() {
         const cw = container.clientWidth, ch = container.clientHeight;
         const ir = lbImg.naturalWidth / lbImg.naturalHeight, cr = cw / ch;
         if (ir > cr) { lbImg.style.width = '100%'; lbImg.style.height = 'auto'; }
         else { lbImg.style.width = 'auto'; lbImg.style.height = '100%'; }
         zoomLevel = 1; moveX = 0; moveY = 0;
-        zoomInfo.innerText = "Zoom: Fit";
-        applyTransform(false);
+        document.getElementById('zoomInfo').innerText = "Zoom: Fit";
+        applyTransform();
     }
 
     function changeImg(step) {
-        if (!currentViewList.length) return;
         currentIndex = (currentIndex + step + currentViewList.length) % currentViewList.length;
         updateImg();
     }
@@ -369,78 +359,74 @@
         stopSlideshow();
     }
 
-    btnSlideshow.onclick = (e) => {
-        e.stopPropagation();
-        isSlideshow ? stopSlideshow() : startSlideshow();
-    };
+    // --- 自動播放 ---
+    const btnSlideshow = document.getElementById('btnSlideshow');
+    btnSlideshow.onclick = (e) => { e.stopPropagation(); isSlideshow ? stopSlideshow() : startSlideshow(); };
 
     function startSlideshow() {
-        isSlideshow = true;
-        btnSlideshow.innerText = "⏸ 停止播放";
-        slideBar.classList.add('playing');
-        const interval = parseFloat(speedRange.value) * 1000;
-        slideTimer = setInterval(() => changeImg(1), interval);
+        isSlideshow = true; btnSlideshow.innerText = "⏸ 停止播放";
+        slideTimer = setInterval(() => changeImg(1), parseFloat(speedRange.value) * 1000);
     }
-
     function stopSlideshow() {
-        isSlideshow = false;
-        btnSlideshow.innerText = "▶ 開始播放";
-        slideBar.classList.remove('playing');
+        isSlideshow = false; btnSlideshow.innerText = "▶ 開始播放";
         clearInterval(slideTimer);
     }
 
     speedRange.oninput = (e) => {
-        speedDisplay.innerText = parseFloat(e.target.value).toFixed(0) + "s";
+        speedDisplay.innerText = e.target.value + "s";
         if (isSlideshow) { stopSlideshow(); startSlideshow(); }
     };
 
     showToolsCheckbox.onchange = (e) => {
-        if (lb.style.display === 'flex') {
-            slideBar.style.display = e.target.checked ? 'flex' : 'none';
-        }
+        if (lb.style.display === 'flex') slideBar.style.display = e.target.checked ? 'flex' : 'none';
     };
 
+    // --- 鍵盤與手勢 ---
     window.addEventListener('keydown', (e) => {
         if (lb.style.display !== 'flex') return;
-        if (e.key === 'ArrowRight') { stopSlideshow(); changeImg(1); }
-        else if (e.key === 'ArrowLeft') { stopSlideshow(); changeImg(-1); }
+        if (e.key === 'ArrowRight') changeImg(1);
+        else if (e.key === 'ArrowLeft') changeImg(-1);
         else if (e.key === 'Escape') closeLightbox();
         else if (e.key === ' ') { e.preventDefault(); isSlideshow ? stopSlideshow() : startSlideshow(); }
     });
 
+    const container = document.getElementById('imgContainer');
     container.onwheel = (e) => {
         e.preventDefault();
-        stopSlideshow();
         zoomLevel = Math.max(0.1, Math.min(10, zoomLevel + (e.deltaY > 0 ? -0.1 : 0.1)));
-        zoomInfo.innerText = `Zoom: ${Math.round(zoomLevel * 100)}%`;
-        applyTransform(true);
+        document.getElementById('zoomInfo').innerText = `Zoom: ${Math.round(zoomLevel * 100)}%`;
+        applyTransform();
     };
 
-    function applyTransform(useT) {
-        lbImg.style.transition = useT ? 'transform 0.1s ease-out' : 'none';
-        lbImg.style.transform = `translate(${moveX}px, ${moveY}px) scale(${zoomLevel})`;
+    function applyTransform() { lbImg.style.transform = `translate(${moveX}px, ${moveY}px) scale(${zoomLevel})`; }
+
+    // --- IndexedDB ---
+    const DB_NAME = "WebPFolderDB_vFinal";
+    async function saveHandle(h) {
+        const db = await new Promise(res => {
+            const r = indexedDB.open(DB_NAME, 1);
+            r.onupgradeneeded = () => r.result.createObjectStore("handles");
+            r.onsuccess = () => res(r.result);
+        });
+        db.transaction("handles", "readwrite").objectStore("handles").put(h, "last");
+    }
+    async function getLastHandle() {
+        return new Promise(res => {
+            const r = indexedDB.open(DB_NAME, 1);
+            r.onsuccess = () => {
+                const req = r.result.transaction("handles").objectStore("handles").get("last");
+                req.onsuccess = () => res(req.result);
+            };
+        });
     }
 
-    container.onmousedown = (e) => {
-        if (isSlideshow) stopSlideshow();
-        isDragging = true;
-        startX = e.clientX - moveX;
-        startY = e.clientY - moveY;
-    };
-    window.onmousemove = (e) => {
-        if (!isDragging) return;
-        moveX = e.clientX - startX;
-        moveY = e.clientY - startY;
-        applyTransform(false);
-    };
-    window.onmouseup = () => isDragging = false;
-
+    document.getElementById('btnPicker').onclick = () => handlePicker(false);
+    document.getElementById('btnQuickLoad').onclick = () => handlePicker(true);
     document.getElementById('search').oninput = render;
     document.getElementById('sortType').onchange = render;
-    document.getElementById('btnFullscreen').onclick = () => {
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-        else document.exitFullscreen();
-    };
+    document.getElementById('btnFullscreen').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+
+    (async () => { if (await getLastHandle()) document.getElementById('btnQuickLoad').style.display = 'inline-block'; })();
 </script>
 </body>
 </html>
