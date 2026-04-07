@@ -227,6 +227,10 @@
                     const file = await entry.getFile();
                     allFiles.push({ name, url: URL.createObjectURL(file), size: file.size, date: file.lastModified, path, originalIndex: allFiles.length });
                 }
+                else if (name.toLowerCase().endsWith('.gif') && !name.startsWith('.') && !name.startsWith('._')) {
+                    const file = await entry.getFile();
+                    allFiles.push({ name, url: URL.createObjectURL(file), size: file.size, date: file.lastModified, path, originalIndex: allFiles.length });
+                }
             } else if (entry.kind === 'directory' && !entry.name.startsWith('.') && !entry.name.startsWith('._')) {
                 await scanFilesRecursive(entry, path + entry.name + "/");
             }
@@ -238,6 +242,10 @@
             if (entry.kind === 'file') {
                 const name = entry.name;
                 if (name.toLowerCase().endsWith('.webp') && !name.startsWith('.') && !name.startsWith('._')) {
+                    const file = await entry.getFile();
+                    allFiles.push({ name, url: URL.createObjectURL(file), size: file.size, date: file.lastModified, path, originalIndex: allFiles.length });
+                }
+                else if (name.toLowerCase().endsWith('.gif') && !name.startsWith('.') && !name.startsWith('._')) {
                     const file = await entry.getFile();
                     allFiles.push({ name, url: URL.createObjectURL(file), size: file.size, date: file.lastModified, path, originalIndex: allFiles.length });
                 }
