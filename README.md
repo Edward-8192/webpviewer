@@ -1,6 +1,6 @@
-# Personal WebP Viewer 🚀
+# Personal WebP/GIF Viewer 🚀
 
-A personalized, lightweight web tool designed for high-efficiency WebP image browsing. Access local folders securely directly through your browser without server uploads, featuring intelligent directory management and professional lightbox tools.
+A personalized, lightweight web tool designed for high-efficiency WebP/GIF image browsing. Access local folders securely directly through your browser without server uploads, featuring intelligent directory management and professional lightbox tools.
 
 ## ✨ Key Features
 
