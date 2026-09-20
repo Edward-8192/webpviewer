@@ -47,8 +47,7 @@ A personalized, lightweight web tool designed for high-efficiency WebP/GIF image
 ---
 
 ## Note
-If you are using Brave, please go to brave://flags
-File System Access API => Enable and Relunach Brave
+If you are using Brave, please go to brave://flags, and then find "File System Access API". Enable this flag and Relunach Brave.
 
 ---
 *Created with ❤️ for efficient image management.*
