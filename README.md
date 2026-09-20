@@ -45,4 +45,10 @@ A personalized, lightweight web tool designed for high-efficiency WebP/GIF image
 4. **Scan**: Check the directories you wish to view in the popup window.
 
 ---
+
+## Note
+If you are using Brave, please go to brave://flags
+File System Access API => Enable and Relunach Brave
+
+---
 *Created with ❤️ for efficient image management.*
