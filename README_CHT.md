@@ -45,4 +45,9 @@
 4. **精確掃描**：在彈出的視窗中勾選欲檢視的目錄。
 
 ---
+
+## Note
+If you are using Brave, please go to brave://flags, and then find "File System Access API". Enable this flag and Relunach Brave.
+
+---
 *Created with ❤️ for efficient image management.*
